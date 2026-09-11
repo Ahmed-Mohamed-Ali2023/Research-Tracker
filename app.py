@@ -6,18 +6,38 @@ import json
 import os
 from datetime import datetime
 
-# إعدادات الصفحة والمراحل
+# إعدادات الصفحة
 st.set_page_config(page_title="نظام النشر", layout="wide")
+
+# تطبيق خط Cairo الداكن وتقليل المسافات البيضاء
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Cairo', sans-serif !important;
+        color: #1a1a1a !important; 
+    }
+    
+    .block-container {
+        padding-top: 1.5rem !important;
+        padding-bottom: 1rem !important;
+        max-width: 95% !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("📊 سيستم متابعة نشر الأبحاث (متصل بـ Google Sheets)")
 
-STAGES = ["الترشيح والتسعير", "موافقة العميل", "تأكيد التنسيق", "التقديم للمجلة", "التحكيم والتعديلات", "الدفع والقبول", "النشر"]
+# المراحل المحدثة كما طلبت
+STAGES = ["الترشيح والتسعير", "موافقة العميل", "التقديم للمجلة", "قيد التحكيم", "التعديلات", "الدفع والقبول", "النشر"]
 
 # ----------------- دالة الاتصال بجوجل شيت -----------------
 @st.cache_resource
 def get_sheet():
     creds_json = os.environ.get("GCP_CREDENTIALS")
     if not creds_json:
-        st.error("⚠️ لم يتم العثور على المفتاح السري GCP_CREDENTIALS في الإعدادات.")
+        st.error("⚠️ لم يتم العثور على المفتاح السري GCP_CREDENTIALS.")
         st.stop()
     
     creds_dict = json.loads(creds_json)
@@ -38,20 +58,38 @@ tab1, tab2, tab3 = st.tabs(["📋 لوحة المتابعة", "➕ إضافة ب
 # ----------------- التبويب الأول: المتابعة -----------------
 with tab1:
     if not df.empty:
+        # دالة حساب النسبة لشريط التقدم
         def get_progress(stage_name):
             if stage_name in STAGES:
                 idx = STAGES.index(stage_name)
                 return min((idx + 1) / len(STAGES), 1.0)
             return 0.0
+            
+        # دالة المؤشر اللوني الذكي
+        def get_color_indicator(stage_name):
+            if stage_name == "النشر":
+                return "🟢 مكتمل"
+            elif stage_name == "الدفع والقبول":
+                return "🟡 قبول"
+            else:
+                return "🔴 قيد العمل"
 
+        # تطبيق الدوال على البيانات
         df['نسبة الإنجاز'] = df.get('المرحلة', pd.Series([''] * len(df))).apply(get_progress)
+        df['المؤشر'] = df.get('المرحلة', pd.Series([''] * len(df))).apply(get_color_indicator)
         
+        # ترتيب ظهور الأعمدة ليكون المؤشر اللوني بجوار نسبة الإنجاز والمرحلة
+        columns_order = ['كود البحث', 'تاريخ الاستلام', 'عنوان البحث', 'الباحث', 'اسم المجلة', 'التكلفة المبدئية', 'التكلفة النهائية', 'المرحلة', 'المؤشر', 'نسبة الإنجاز']
+        available_columns = [col for col in columns_order if col in df.columns]
+        df = df[available_columns]
+
         st.success(f"إجمالي الأبحاث الحالية: {len(df)}")
         
         st.data_editor(
             df,
             column_config={
-                "نسبة الإنجاز": st.column_config.ProgressColumn("التقدم", format="%.2f", min_value=0, max_value=1)
+                "نسبة الإنجاز": st.column_config.ProgressColumn("التقدم", format="%.2f", min_value=0, max_value=1),
+                "المؤشر": st.column_config.TextColumn("حالة البحث")
             },
             hide_index=True, use_container_width=True
         )
@@ -88,7 +126,9 @@ with tab2:
 # ----------------- التبويب الثالث: تحديث الحالة والتكاليف -----------------
 with tab3:
     if not df.empty:
-        research_dict = dict(zip(df['كود البحث'].astype(str) + " | " + df['الباحث'].astype(str), df['كود البحث'].astype(str)))
+        display_names = df['كود البحث'].astype(str) + " | " + df['الباحث'].astype(str)
+        research_dict = dict(zip(display_names, df['كود البحث'].astype(str)))
+        
         selected_display = st.selectbox("🔍 اختر البحث لتحديثه:", list(research_dict.keys()))
         selected_code = research_dict[selected_display]
         
