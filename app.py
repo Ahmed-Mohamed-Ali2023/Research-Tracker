@@ -12,7 +12,7 @@ st.set_page_config(page_title="نظام النشر", layout="wide")
 # تطبيق خط Cairo الداكن وتقليل المسافات البيضاء
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;900&display=swap');
     
     html, body, [class*="css"], .stDataFrame {
         font-family: 'Cairo', sans-serif !important;
@@ -124,21 +124,26 @@ with tab1:
         available_columns = [col for col in columns_order if col in df.columns]
         df = df[available_columns]
         
-        # 1. التنسيق العام (توسيط النصوص)
+        # 1. التنسيق العام (توسيط النصوص والخط)
         styled_df = df.style.set_properties(**{'text-align': 'center', 'font-family': 'Cairo'})
         
-        # 2. تمييز عمود "المرحلة" بلون مختلف وخط عريض
+        # 2. تمييز عمود "المرحلة"
         styled_df = styled_df.set_properties(subset=['المرحلة'], **{
             'background-color': 'rgba(33, 150, 243, 0.15)', 
             'color': '#64b5f6', 
             'font-weight': 'bold'
         })
         
-        # 3. توضيح وتكبير عناوين الجدول (الرؤوس)
-        styled_df = styled_df.set_table_styles([{
-            'selector': 'th',
-            'props': [('font-weight', 'bold'), ('font-size', '16px'), ('text-align', 'center')]
-        }])
+        # 3. توضيح وتكبير عناوين الجدول (Headers) لجعلها بارزة جداً
+        styled_df = styled_df.set_table_styles([
+            {'selector': 'th', 'props': [
+                ('font-weight', '900'), 
+                ('font-size', '16px'), 
+                ('color', '#000000'), 
+                ('background-color', '#dbeafe'), 
+                ('text-align', 'center')
+            ]}
+        ])
         
         # 4. تطبيق تلوين عمود المؤشر
         styled_df = styled_df.apply(lambda x: [style_indicator_column(v) for v in x], subset=['المؤشر'])
