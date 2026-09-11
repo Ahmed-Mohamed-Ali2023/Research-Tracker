@@ -124,10 +124,23 @@ with tab1:
         available_columns = [col for col in columns_order if col in df.columns]
         df = df[available_columns]
         
-        # تطبيق التنسيق العام (توسيط) + التنسيق اللوني لعمود المؤشر
+        # 1. التنسيق العام (توسيط النصوص)
         styled_df = df.style.set_properties(**{'text-align': 'center', 'font-family': 'Cairo'})
         
-        # تطبيق تلوين الخلايا على عمود المؤشر فقط بطريقة تدعم جميع إصدارات Pandas
+        # 2. تمييز عمود "المرحلة" بلون مختلف وخط عريض
+        styled_df = styled_df.set_properties(subset=['المرحلة'], **{
+            'background-color': 'rgba(33, 150, 243, 0.15)', 
+            'color': '#64b5f6', 
+            'font-weight': 'bold'
+        })
+        
+        # 3. توضيح وتكبير عناوين الجدول (الرؤوس)
+        styled_df = styled_df.set_table_styles([{
+            'selector': 'th',
+            'props': [('font-weight', 'bold'), ('font-size', '16px'), ('text-align', 'center')]
+        }])
+        
+        # 4. تطبيق تلوين عمود المؤشر
         styled_df = styled_df.apply(lambda x: [style_indicator_column(v) for v in x], subset=['المؤشر'])
         
         st.dataframe(
