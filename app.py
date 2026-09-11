@@ -9,7 +9,7 @@ from datetime import datetime
 # إعدادات الصفحة
 st.set_page_config(page_title="نظام النشر", layout="wide")
 
-# تطبيق الاتجاه من اليمين لليسار (RTL)، خط Cairo، وتقليل المسافات
+# تطبيق الاتجاه من اليمين لليسار (RTL)، خط Cairo
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800;900&display=swap');
@@ -189,26 +189,24 @@ with dashboard_view:
             'font-weight': 'bold'
         })
         
-        # التعديل هنا: فرض اللون الأبيض الساطع والخلفية الداكنة المميزة لعناوين الأعمدة
-        styled_df = styled_df.set_table_styles([
-            {'selector': 'th', 'props': [
-                ('font-weight', '900 !important'), 
-                ('font-size', '16px !important'), 
-                ('color', '#ffffff !important'), 
-                ('background-color', '#2d2d2d !important'), 
-                ('text-align', 'center !important'),
-                ('border-bottom', '2px solid #2196f3 !important')
-            ]}
-        ])
-        
         styled_df = styled_df.apply(lambda x: [style_indicator_column(v) for v in x], subset=['المؤشر'])
         styled_df = styled_df.apply(lambda x: [style_cost_status(v) for v in x], subset=['حالة التكلفة'])
         
+        # استخدام الأيقونات (Emojis) لتمييز العناوين وجعلها بارزة بدلاً من تلوين الخلفية
         st.dataframe(
             styled_df,
             column_config={
-                "نسبة الإنجاز": st.column_config.ProgressColumn("التقدم", format="%.2f", min_value=0, max_value=1),
-                "المؤشر": st.column_config.TextColumn("حالة البحث")
+                "نسبة الإنجاز": st.column_config.ProgressColumn("📈 التقدم", format="%.2f", min_value=0, max_value=1),
+                "المؤشر": st.column_config.TextColumn("💡 حالة البحث"),
+                "المرحلة": st.column_config.TextColumn("📌 المرحلة"),
+                "حالة التكلفة": st.column_config.TextColumn("🧾 حالة التكلفة"),
+                "التكلفة النهائية": st.column_config.NumberColumn("💵 التكلفة النهائية"),
+                "التكلفة المبدئية": st.column_config.NumberColumn("💰 التكلفة المبدئية"),
+                "اسم المجلة": st.column_config.TextColumn("📖 اسم المجلة"),
+                "الباحث": st.column_config.TextColumn("👤 الباحث"),
+                "عنوان البحث": st.column_config.TextColumn("🏷️ عنوان البحث"),
+                "تاريخ الاستلام": st.column_config.TextColumn("📅 تاريخ الاستلام"),
+                "كود البحث": st.column_config.TextColumn("🔑 كود البحث"),
             },
             hide_index=True, use_container_width=True
         )
