@@ -14,7 +14,7 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;700&display=swap');
     
-    html, body, [class*="css"] {
+    html, body, [class*="css"], .stDataFrame {
         font-family: 'Cairo', sans-serif !important;
         color: #1a1a1a !important; 
     }
@@ -24,12 +24,18 @@ st.markdown("""
         padding-bottom: 1rem !important;
         max-width: 95% !important;
     }
+    
+    /* توسيط عناوين الأعمدة في الجداول إن أمكن */
+    .col-header-text {
+        text-align: center !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 سيستم متابعة نشر الأبحاث (متصل بـ Google Sheets)")
+# عنوان النظام الجديد والأكثر احترافية
+st.title("📊 المنصة الذكية لإدارة ومتابعة نشر الأبحاث")
 
-# المراحل المحدثة كما طلبت
+# المراحل
 STAGES = ["الترشيح والتسعير", "موافقة العميل", "التقديم للمجلة", "قيد التحكيم", "التعديلات", "الدفع والقبول", "النشر"]
 
 # ----------------- دالة الاتصال بجوجل شيت -----------------
@@ -53,7 +59,7 @@ data = sheet.get_all_records()
 df = pd.DataFrame(data)
 
 # ----------------- تقسيم الواجهة -----------------
-tab1, tab2, tab3 = st.tabs(["📋 لوحة المتابعة", "➕ إضافة بحث", "⚙️ تحديث حالة وتكاليف"])
+tab1, tab2, tab3 = st.tabs(["📋 لوحة المتابعة", "➕ إضافة بحث", "⚙️ تحديث أو حذف بحث"])
 
 # ----------------- التبويب الأول: المتابعة -----------------
 with tab1:
@@ -74,19 +80,20 @@ with tab1:
             else:
                 return "🔴 قيد العمل"
 
-        # تطبيق الدوال على البيانات
         df['نسبة الإنجاز'] = df.get('المرحلة', pd.Series([''] * len(df))).apply(get_progress)
         df['المؤشر'] = df.get('المرحلة', pd.Series([''] * len(df))).apply(get_color_indicator)
         
-        # ترتيب ظهور الأعمدة ليكون المؤشر اللوني بجوار نسبة الإنجاز والمرحلة
         columns_order = ['كود البحث', 'تاريخ الاستلام', 'عنوان البحث', 'الباحث', 'اسم المجلة', 'التكلفة المبدئية', 'التكلفة النهائية', 'المرحلة', 'المؤشر', 'نسبة الإنجاز']
         available_columns = [col for col in columns_order if col in df.columns]
         df = df[available_columns]
 
         st.success(f"إجمالي الأبحاث الحالية: {len(df)}")
         
-        st.data_editor(
-            df,
+        # استخدام st.dataframe مع تنسيق البانداس (Styler) لتوسيط النصوص داخل الخلايا
+        styled_df = df.style.set_properties(**{'text-align': 'center', 'font-family': 'Cairo'})
+        
+        st.dataframe(
+            styled_df,
             column_config={
                 "نسبة الإنجاز": st.column_config.ProgressColumn("التقدم", format="%.2f", min_value=0, max_value=1),
                 "المؤشر": st.column_config.TextColumn("حالة البحث")
@@ -123,13 +130,13 @@ with tab2:
             else:
                 st.error("الرجاء إدخال كود البحث، العنوان، واسم الباحث كحد أدنى.")
 
-# ----------------- التبويب الثالث: تحديث الحالة والتكاليف -----------------
+# ----------------- التبويب الثالث: تحديث أو حذف -----------------
 with tab3:
     if not df.empty:
         display_names = df['كود البحث'].astype(str) + " | " + df['الباحث'].astype(str)
         research_dict = dict(zip(display_names, df['كود البحث'].astype(str)))
         
-        selected_display = st.selectbox("🔍 اختر البحث لتحديثه:", list(research_dict.keys()))
+        selected_display = st.selectbox("🔍 اختر البحث:", list(research_dict.keys()))
         selected_code = research_dict[selected_display]
         
         current_data = df[df['كود البحث'].astype(str) == selected_code].iloc[0]
@@ -155,18 +162,34 @@ with tab3:
         new_initial_cost = col5.number_input("التكلفة المبدئية:", value=curr_initial)
         new_final_cost = col6.number_input("التكلفة النهائية:", value=curr_final)
         
-        if st.button("💾 حفظ التحديثات"):
-            try:
-                cell = sheet.find(selected_code)
-                if cell:
-                    sheet.update_cell(cell.row, 5, new_journal)
-                    sheet.update_cell(cell.row, 6, new_initial_cost)
-                    sheet.update_cell(cell.row, 7, new_final_cost)
-                    sheet.update_cell(cell.row, 8, new_stage)
+        col_btn1, col_btn2 = st.columns(2)
+        
+        with col_btn1:
+            if st.button("💾 حفظ التحديثات", use_container_width=True):
+                try:
+                    cell = sheet.find(selected_code)
+                    if cell:
+                        sheet.update_cell(cell.row, 5, new_journal)
+                        sheet.update_cell(cell.row, 6, new_initial_cost)
+                        sheet.update_cell(cell.row, 7, new_final_cost)
+                        sheet.update_cell(cell.row, 8, new_stage)
+                        
+                        st.success("تم تحديث بيانات البحث بنجاح!")
+                        st.rerun()
+                    else:
+                        st.error("لم يتم العثور على هذا البحث في الشيت.")
+                except Exception as e:
+                    st.error(f"حدث خطأ أثناء التحديث: {e}")
                     
-                    st.success("تم تحديث بيانات البحث بنجاح في Google Sheets!")
-                    st.rerun()
-                else:
-                    st.error("لم يتم العثور على هذا البحث في الشيت.")
-            except Exception as e:
-                st.error(f"حدث خطأ أثناء التحديث: {e}")
+        with col_btn2:
+            if st.button("🗑️ حذف البحث نهائياً", use_container_width=True):
+                try:
+                    cell = sheet.find(selected_code)
+                    if cell:
+                        sheet.delete_row(cell.row)
+                        st.success("تم حذف البحث بنجاح من النظام ومن Google Sheets!")
+                        st.rerun()
+                    else:
+                        st.error("لم يتم العثور على هذا البحث في الشيت للحذفه.")
+                except Exception as e:
+                    st.error(f"حدث خطأ أثناء الحذف: {e}")
