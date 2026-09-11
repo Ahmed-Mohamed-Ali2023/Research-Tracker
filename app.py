@@ -9,7 +9,7 @@ from datetime import datetime
 # إعدادات الصفحة
 st.set_page_config(page_title="نظام النشر", layout="wide")
 
-# تطبيق خط Cairo الداكن، تقليل المسافات، وتنسيق التبويبات العلوية
+# تطبيق خط Cairo الداكن، تقليل المسافات، وتنسيق التبويبات
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800;900&display=swap');
@@ -25,12 +25,11 @@ st.markdown("""
         max-width: 95% !important;
     }
     
-    /* ----------------- تنسيق التبويبات (Tabs) ----------------- */
-    /* التبويبات العادية */
+    /* تنسيق التبويبات (Tabs) */
     button[data-baseweb="tab"] {
         font-family: 'Cairo', sans-serif !important;
-        font-size: 20px !important; /* تكبير الخط */
-        font-weight: 800 !important; /* خط عريض */
+        font-size: 20px !important;
+        font-weight: 800 !important;
         padding: 12px 24px !important;
         background-color: #1e1e1e !important;
         color: #9e9e9e !important;
@@ -41,28 +40,25 @@ st.markdown("""
         transition: all 0.3s ease !important;
     }
     
-    /* التبويب النشط (المحدد حالياً) */
     button[data-baseweb="tab"][aria-selected="true"] {
-        background-color: #2196f3 !important; /* أزرق مميز */
+        background-color: #2196f3 !important;
         color: #ffffff !important;
         border: 1px solid #2196f3 !important;
         box-shadow: 0 -4px 10px rgba(33, 150, 243, 0.3) !important;
     }
     
-    /* تأثير تمرير الماوس */
     button[data-baseweb="tab"]:hover {
         background-color: #333 !important;
         color: #fff !important;
     }
-    /* -------------------------------------------------------- */
-    
     </style>
 """, unsafe_allow_html=True)
 
-# عنوان النظام
 st.title("📊 المنصة الذكية لإدارة ومتابعة نشر الأبحاث")
 
-# المراحل
+# التحقق من الرابط السري (هل المستخدم هو الأدمن؟)
+is_admin = st.query_params.get("mode") == "admin"
+
 STAGES = ["الترشيح والتسعير", "موافقة العميل", "التقديم للمجلة", "قيد التحكيم", "التعديلات", "الدفع والقبول", "النشر"]
 
 # ----------------- دالة الاتصال بجوجل شيت -----------------
@@ -85,18 +81,23 @@ sheet = get_sheet()
 data = sheet.get_all_records()
 df = pd.DataFrame(data)
 
-# ----------------- تقسيم الواجهة -----------------
-tab1, tab2, tab3 = st.tabs(["📋 لوحة المتابعة", "➕ إضافة بحث", "⚙️ تحديث حالة وتكاليف"])
+# ----------------- تقسيم الواجهة بناءً على الصلاحيات -----------------
+if is_admin:
+    # واجهة الأدمن (كاملة)
+    tab1, tab2, tab3 = st.tabs(["📋 لوحة المتابعة", "➕ إضافة بحث", "⚙️ تحديث حالة وتكاليف"])
+    dashboard_view = tab1
+else:
+    # واجهة المدير (مشاهدة فقط)
+    st.info("👁️ وضع المشاهدة: لوحة المتابعة والإحصائيات")
+    dashboard_view = st.container()
 
-# ----------------- التبويب الأول: المتابعة -----------------
-with tab1:
+# ----------------- الكود الخاص بلوحة المتابعة (يظهر للجميع) -----------------
+with dashboard_view:
     if not df.empty:
-        # حساب الإحصائيات
         total_research = len(df)
         completed_research = len(df[df['المرحلة'] == "النشر"])
         in_progress_research = total_research - completed_research
         
-        # عرض مربعات الإحصائيات
         col_stat1, col_stat2, col_stat3 = st.columns(3)
         
         with col_stat1:
@@ -123,14 +124,12 @@ with tab1:
             </div>
             """, unsafe_allow_html=True)
 
-        # دالة حساب النسبة لشريط التقدم
         def get_progress(stage_name):
             if stage_name in STAGES:
                 idx = STAGES.index(stage_name)
                 return min((idx + 1) / len(STAGES), 1.0)
             return 0.0
             
-        # دالة المؤشر اللوني النصي
         def get_color_indicator(stage_name):
             if stage_name == "النشر":
                 return "🟢 مكتمل"
@@ -139,7 +138,6 @@ with tab1:
             else:
                 return "🔴 قيد العمل"
 
-        # دالة تلوين خلايا عمود المؤشر
         def style_indicator_column(val):
             if val == "🟢 مكتمل":
                 return 'color: #4caf50; font-weight: bold; background-color: rgba(76, 175, 80, 0.15);'
@@ -156,17 +154,14 @@ with tab1:
         available_columns = [col for col in columns_order if col in df.columns]
         df = df[available_columns]
         
-        # 1. التنسيق العام (توسيط النصوص والخط)
         styled_df = df.style.set_properties(**{'text-align': 'center', 'font-family': 'Cairo'})
         
-        # 2. تمييز عمود "المرحلة"
         styled_df = styled_df.set_properties(subset=['المرحلة'], **{
             'background-color': 'rgba(33, 150, 243, 0.15)', 
             'color': '#64b5f6', 
             'font-weight': 'bold'
         })
         
-        # 3. توضيح وتكبير عناوين الجدول (Headers) لجعلها بارزة جداً
         styled_df = styled_df.set_table_styles([
             {'selector': 'th', 'props': [
                 ('font-weight', '900'), 
@@ -177,7 +172,6 @@ with tab1:
             ]}
         ])
         
-        # 4. تطبيق تلوين عمود المؤشر
         styled_df = styled_df.apply(lambda x: [style_indicator_column(v) for v in x], subset=['المؤشر'])
         
         st.dataframe(
@@ -189,79 +183,79 @@ with tab1:
             hide_index=True, use_container_width=True
         )
     else:
-        st.info("لا توجد أبحاث مسجلة حتى الآن. اذهب إلى التبويب التالي لإضافة بحث.")
+        st.info("لا توجد أبحاث مسجلة حتى الآن.")
 
-# ----------------- التبويب الثاني: إضافة بحث -----------------
-with tab2:
-    with st.form("add_form"):
-        col1, col2 = st.columns(2)
-        code = col1.text_input("كود البحث (مثال: RES-001)")
-        date_received = st.date_input("تاريخ الاستلام", datetime.today())
-        
-        title = st.text_input("عنوان البحث")
-        researcher = st.text_input("اسم الباحث")
-        journal = st.text_input("اسم المجلة (يمكن تركه فارغاً)")
-        
-        col3, col4 = st.columns(2)
-        initial_cost = col3.number_input("التكلفة المبدئية", min_value=0.0, value=0.0)
-        final_cost = col4.number_input("التكلفة النهائية", min_value=0.0, value=0.0)
-        
-        if st.form_submit_button("حفظ البحث الجديد", type="primary"):
-            if code and title and researcher:
-                new_row = [
-                    code, str(date_received), title, researcher, 
-                    journal, initial_cost, final_cost, STAGES[0]
-                ]
-                sheet.append_row(new_row)
-                st.success("تمت الإضافة بنجاح! تم حفظ البيانات في Google Sheets.")
-                st.rerun()
-            else:
-                st.error("الرجاء إدخال كود البحث، العنوان، واسم الباحث كحد أدنى.")
-
-# ----------------- التبويب الثالث: تحديث الحالة والتكاليف -----------------
-with tab3:
-    if not df.empty:
-        display_names = df['كود البحث'].astype(str) + " | " + df['الباحث'].astype(str)
-        research_dict = dict(zip(display_names, df['كود البحث'].astype(str)))
-        
-        selected_display = st.selectbox("🔍 اختر البحث:", list(research_dict.keys()))
-        selected_code = research_dict[selected_display]
-        
-        current_data = df[df['كود البحث'].astype(str) == selected_code].iloc[0]
-        
-        st.markdown("---")
-        current_stage = current_data.get('المرحلة', STAGES[0])
-        stage_idx = STAGES.index(current_stage) if current_stage in STAGES else 0
-        
-        new_stage = st.selectbox("➡️ اختر المرحلة الجديدة للبحث:", STAGES, index=stage_idx)
-        new_journal = st.text_input("اسم المجلة:", value=str(current_data.get('اسم المجلة', '')))
-        
-        col5, col6 = st.columns(2)
-        
-        try:
-            curr_initial = float(current_data.get('التكلفة المبدئية', 0))
-        except:
-            curr_initial = 0.0
-        try:
-            curr_final = float(current_data.get('التكلفة النهائية', 0))
-        except:
-            curr_final = 0.0
+# ----------------- الإضافة والتعديل (تظهر للأدمن فقط) -----------------
+if is_admin:
+    with tab2:
+        with st.form("add_form"):
+            col1, col2 = st.columns(2)
+            code = col1.text_input("كود البحث (مثال: RES-001)")
+            date_received = st.date_input("تاريخ الاستلام", datetime.today())
             
-        new_initial_cost = col5.number_input("التكلفة المبدئية:", value=curr_initial)
-        new_final_cost = col6.number_input("التكلفة النهائية:", value=curr_final)
-        
-        if st.button("💾 حفظ التحديثات", use_container_width=True):
-            try:
-                cell = sheet.find(selected_code)
-                if cell:
-                    sheet.update_cell(cell.row, 5, new_journal)
-                    sheet.update_cell(cell.row, 6, new_initial_cost)
-                    sheet.update_cell(cell.row, 7, new_final_cost)
-                    sheet.update_cell(cell.row, 8, new_stage)
-                    
-                    st.success("تم تحديث بيانات البحث بنجاح!")
+            title = st.text_input("عنوان البحث")
+            researcher = st.text_input("اسم الباحث")
+            journal = st.text_input("اسم المجلة (يمكن تركه فارغاً)")
+            
+            col3, col4 = st.columns(2)
+            initial_cost = col3.number_input("التكلفة المبدئية", min_value=0.0, value=0.0)
+            final_cost = col4.number_input("التكلفة النهائية", min_value=0.0, value=0.0)
+            
+            if st.form_submit_button("حفظ البحث الجديد", type="primary"):
+                if code and title and researcher:
+                    new_row = [
+                        code, str(date_received), title, researcher, 
+                        journal, initial_cost, final_cost, STAGES[0]
+                    ]
+                    sheet.append_row(new_row)
+                    st.success("تمت الإضافة بنجاح! تم حفظ البيانات في Google Sheets.")
                     st.rerun()
                 else:
-                    st.error("لم يتم العثور على هذا البحث في الشيت.")
-            except Exception as e:
-                st.error(f"حدث خطأ أثناء التحديث: {e}")
+                    st.error("الرجاء إدخال كود البحث، العنوان، واسم الباحث كحد أدنى.")
+
+    with tab3:
+        if not df.empty:
+            display_names = df['كود البحث'].astype(str) + " | " + df['الباحث'].astype(str)
+            research_dict = dict(zip(display_names, df['كود البحث'].astype(str)))
+            
+            selected_display = st.selectbox("🔍 اختر البحث:", list(research_dict.keys()))
+            selected_code = research_dict[selected_display]
+            
+            current_data = df[df['كود البحث'].astype(str) == selected_code].iloc[0]
+            
+            st.markdown("---")
+            current_stage = current_data.get('المرحلة', STAGES[0])
+            stage_idx = STAGES.index(current_stage) if current_stage in STAGES else 0
+            
+            new_stage = st.selectbox("➡️ اختر المرحلة الجديدة للبحث:", STAGES, index=stage_idx)
+            new_journal = st.text_input("اسم المجلة:", value=str(current_data.get('اسم المجلة', '')))
+            
+            col5, col6 = st.columns(2)
+            
+            try:
+                curr_initial = float(current_data.get('التكلفة المبدئية', 0))
+            except:
+                curr_initial = 0.0
+            try:
+                curr_final = float(current_data.get('التكلفة النهائية', 0))
+            except:
+                curr_final = 0.0
+                
+            new_initial_cost = col5.number_input("التكلفة المبدئية:", value=curr_initial)
+            new_final_cost = col6.number_input("التكلفة النهائية:", value=curr_final)
+            
+            if st.button("💾 حفظ التحديثات", use_container_width=True):
+                try:
+                    cell = sheet.find(selected_code)
+                    if cell:
+                        sheet.update_cell(cell.row, 5, new_journal)
+                        sheet.update_cell(cell.row, 6, new_initial_cost)
+                        sheet.update_cell(cell.row, 7, new_final_cost)
+                        sheet.update_cell(cell.row, 8, new_stage)
+                        
+                        st.success("تم تحديث بيانات البحث بنجاح!")
+                        st.rerun()
+                    else:
+                        st.error("لم يتم العثور على هذا البحث في الشيت.")
+                except Exception as e:
+                    st.error(f"حدث خطأ أثناء التحديث: {e}")
