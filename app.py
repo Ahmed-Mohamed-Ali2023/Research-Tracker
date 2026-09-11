@@ -59,6 +59,38 @@ tab1, tab2, tab3 = st.tabs(["📋 لوحة المتابعة", "➕ إضافة ب
 # ----------------- التبويب الأول: المتابعة -----------------
 with tab1:
     if not df.empty:
+        # حساب الإحصائيات
+        total_research = len(df)
+        completed_research = len(df[df['المرحلة'] == "النشر"])
+        in_progress_research = total_research - completed_research
+        
+        # عرض مربعات الإحصائيات
+        col_stat1, col_stat2, col_stat3 = st.columns(3)
+        
+        with col_stat1:
+            st.markdown(f"""
+            <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px; border-top: 4px solid #4caf50; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                <h4 style="margin:0; color: #e0e0e0; font-family: 'Cairo', sans-serif;">المكتملة 🟢</h4>
+                <h1 style="margin:0; color: #4caf50; font-family: 'Cairo', sans-serif;">{completed_research}</h1>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        with col_stat2:
+            st.markdown(f"""
+            <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px; border-top: 4px solid #f44336; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                <h4 style="margin:0; color: #e0e0e0; font-family: 'Cairo', sans-serif;">قيد العمل 🔴</h4>
+                <h1 style="margin:0; color: #f44336; font-family: 'Cairo', sans-serif;">{in_progress_research}</h1>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        with col_stat3:
+            st.markdown(f"""
+            <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px; border-top: 4px solid #2196f3; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                <h4 style="margin:0; color: #e0e0e0; font-family: 'Cairo', sans-serif;">إجمالي الأبحاث 📊</h4>
+                <h1 style="margin:0; color: #2196f3; font-family: 'Cairo', sans-serif;">{total_research}</h1>
+            </div>
+            """, unsafe_allow_html=True)
+
         # دالة حساب النسبة لشريط التقدم
         def get_progress(stage_name):
             if stage_name in STAGES:
@@ -66,7 +98,7 @@ with tab1:
                 return min((idx + 1) / len(STAGES), 1.0)
             return 0.0
             
-        # دالة المؤشر اللوني
+        # دالة المؤشر اللوني النصي
         def get_color_indicator(stage_name):
             if stage_name == "النشر":
                 return "🟢 مكتمل"
@@ -75,17 +107,28 @@ with tab1:
             else:
                 return "🔴 قيد العمل"
 
+        # دالة تلوين خلايا عمود المؤشر
+        def style_indicator_column(val):
+            if val == "🟢 مكتمل":
+                return 'color: #4caf50; font-weight: bold; background-color: rgba(76, 175, 80, 0.15);'
+            elif val == "🟡 قبول":
+                return 'color: #ffb300; font-weight: bold; background-color: rgba(255, 179, 0, 0.15);'
+            elif val == "🔴 قيد العمل":
+                return 'color: #f44336; font-weight: bold; background-color: rgba(244, 67, 54, 0.15);'
+            return ''
+
         df['نسبة الإنجاز'] = df.get('المرحلة', pd.Series([''] * len(df))).apply(get_progress)
         df['المؤشر'] = df.get('المرحلة', pd.Series([''] * len(df))).apply(get_color_indicator)
         
         columns_order = ['كود البحث', 'تاريخ الاستلام', 'عنوان البحث', 'الباحث', 'اسم المجلة', 'التكلفة المبدئية', 'التكلفة النهائية', 'المرحلة', 'المؤشر', 'نسبة الإنجاز']
         available_columns = [col for col in columns_order if col in df.columns]
         df = df[available_columns]
-
-        st.success(f"إجمالي الأبحاث الحالية: {len(df)}")
         
-        # تنسيق الجدول لتوسيط النصوص
+        # تطبيق التنسيق العام (توسيط) + التنسيق اللوني لعمود المؤشر
         styled_df = df.style.set_properties(**{'text-align': 'center', 'font-family': 'Cairo'})
+        
+        # تطبيق تلوين الخلايا على عمود المؤشر فقط بطريقة تدعم جميع إصدارات Pandas
+        styled_df = styled_df.apply(lambda x: [style_indicator_column(v) for v in x], subset=['المؤشر'])
         
         st.dataframe(
             styled_df,
