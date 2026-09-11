@@ -105,13 +105,11 @@ with dashboard_view:
         completed_research = len(df[df['المرحلة'] == "النشر"])
         in_progress_research = total_research - completed_research
         
-        # حساب التكلفة المنتظرة (مجموع التكلفة المبدئية للأبحاث بانتظار التكلفة)
         try:
             pending_cost = pd.to_numeric(df[df['حالة التكلفة'] == COST_STATUSES[0]]['التكلفة المبدئية'], errors='coerce').sum()
         except:
             pending_cost = 0
         
-        # تقسيم اللوحة العلوية إلى 4 مربعات
         col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
         
         with col_stat1:
@@ -179,7 +177,6 @@ with dashboard_view:
         df['نسبة الإنجاز'] = df.get('المرحلة', pd.Series([''] * len(df))).apply(get_progress)
         df['المؤشر'] = df.get('المرحلة', pd.Series([''] * len(df))).apply(get_color_indicator)
         
-        # الترتيب الجديد يشمل "حالة التكلفة"
         columns_order = ['نسبة الإنجاز', 'المؤشر', 'المرحلة', 'حالة التكلفة', 'التكلفة النهائية', 'التكلفة المبدئية', 'اسم المجلة', 'الباحث', 'عنوان البحث', 'تاريخ الاستلام', 'كود البحث']
         available_columns = [col for col in columns_order if col in df.columns]
         df = df[available_columns]
@@ -192,13 +189,15 @@ with dashboard_view:
             'font-weight': 'bold'
         })
         
+        # التعديل هنا: فرض اللون الأبيض الساطع والخلفية الداكنة المميزة لعناوين الأعمدة
         styled_df = styled_df.set_table_styles([
             {'selector': 'th', 'props': [
-                ('font-weight', '900'), 
-                ('font-size', '16px'), 
-                ('color', '#000000'), 
-                ('background-color', '#dbeafe'), 
-                ('text-align', 'center')
+                ('font-weight', '900 !important'), 
+                ('font-size', '16px !important'), 
+                ('color', '#ffffff !important'), 
+                ('background-color', '#2d2d2d !important'), 
+                ('text-align', 'center !important'),
+                ('border-bottom', '2px solid #2196f3 !important')
             ]}
         ])
         
@@ -234,7 +233,6 @@ if is_admin:
             
             if st.form_submit_button("حفظ البحث الجديد", type="primary"):
                 if code and title and researcher:
-                    # إضافة حالة التكلفة كقيمة افتراضية للبحث الجديد
                     new_row = [
                         code, str(date_received), title, researcher, 
                         journal, initial_cost, final_cost, STAGES[0], COST_STATUSES[0]
