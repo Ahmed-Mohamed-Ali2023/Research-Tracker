@@ -105,7 +105,14 @@ with dashboard_view:
         completed_research = len(df[df['المرحلة'] == "النشر"])
         in_progress_research = total_research - completed_research
         
-        col_stat1, col_stat2, col_stat3 = st.columns(3)
+        # حساب التكلفة المنتظرة (مجموع التكلفة المبدئية للأبحاث بانتظار التكلفة)
+        try:
+            pending_cost = pd.to_numeric(df[df['حالة التكلفة'] == COST_STATUSES[0]]['التكلفة المبدئية'], errors='coerce').sum()
+        except:
+            pending_cost = 0
+        
+        # تقسيم اللوحة العلوية إلى 4 مربعات
+        col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
         
         with col_stat1:
             st.markdown(f"""
@@ -128,6 +135,14 @@ with dashboard_view:
             <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px; border-top: 4px solid #2196f3; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;">
                 <h4 style="margin:0; color: #e0e0e0; font-family: 'Cairo', sans-serif;">إجمالي الأبحاث 📊</h4>
                 <h1 style="margin:0; color: #2196f3; font-family: 'Cairo', sans-serif;">{total_research}</h1>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        with col_stat4:
+            st.markdown(f"""
+            <div style="background-color: #1e1e1e; padding: 15px; border-radius: 8px; border-top: 4px solid #ff9800; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                <h4 style="margin:0; color: #e0e0e0; font-family: 'Cairo', sans-serif;">تكلفة منتظرة ⏳</h4>
+                <h1 style="margin:0; color: #ff9800; font-family: 'Cairo', sans-serif;">{pending_cost:,.0f}</h1>
             </div>
             """, unsafe_allow_html=True)
 
@@ -277,7 +292,7 @@ if is_admin:
                         sheet.update_cell(cell.row, 6, new_initial_cost)
                         sheet.update_cell(cell.row, 7, new_final_cost)
                         sheet.update_cell(cell.row, 8, new_stage)
-                        sheet.update_cell(cell.row, 9, new_cost_status) # تحديث عمود حالة التكلفة
+                        sheet.update_cell(cell.row, 9, new_cost_status)
                         
                         st.success("تم تحديث بيانات البحث بنجاح!")
                         st.rerun()
