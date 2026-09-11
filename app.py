@@ -24,15 +24,10 @@ st.markdown("""
         padding-bottom: 1rem !important;
         max-width: 95% !important;
     }
-    
-    /* توسيط عناوين الأعمدة في الجداول إن أمكن */
-    .col-header-text {
-        text-align: center !important;
-    }
     </style>
 """, unsafe_allow_html=True)
 
-# عنوان النظام الجديد والأكثر احترافية
+# عنوان النظام
 st.title("📊 المنصة الذكية لإدارة ومتابعة نشر الأبحاث")
 
 # المراحل
@@ -59,7 +54,7 @@ data = sheet.get_all_records()
 df = pd.DataFrame(data)
 
 # ----------------- تقسيم الواجهة -----------------
-tab1, tab2, tab3 = st.tabs(["📋 لوحة المتابعة", "➕ إضافة بحث", "⚙️ تحديث أو حذف بحث"])
+tab1, tab2, tab3 = st.tabs(["📋 لوحة المتابعة", "➕ إضافة بحث", "⚙️ تحديث حالة وتكاليف"])
 
 # ----------------- التبويب الأول: المتابعة -----------------
 with tab1:
@@ -71,7 +66,7 @@ with tab1:
                 return min((idx + 1) / len(STAGES), 1.0)
             return 0.0
             
-        # دالة المؤشر اللوني الذكي
+        # دالة المؤشر اللوني
         def get_color_indicator(stage_name):
             if stage_name == "النشر":
                 return "🟢 مكتمل"
@@ -89,7 +84,7 @@ with tab1:
 
         st.success(f"إجمالي الأبحاث الحالية: {len(df)}")
         
-        # استخدام st.dataframe مع تنسيق البانداس (Styler) لتوسيط النصوص داخل الخلايا
+        # تنسيق الجدول لتوسيط النصوص
         styled_df = df.style.set_properties(**{'text-align': 'center', 'font-family': 'Cairo'})
         
         st.dataframe(
@@ -130,7 +125,7 @@ with tab2:
             else:
                 st.error("الرجاء إدخال كود البحث، العنوان، واسم الباحث كحد أدنى.")
 
-# ----------------- التبويب الثالث: تحديث أو حذف -----------------
+# ----------------- التبويب الثالث: تحديث الحالة والتكاليف -----------------
 with tab3:
     if not df.empty:
         display_names = df['كود البحث'].astype(str) + " | " + df['الباحث'].astype(str)
@@ -162,34 +157,18 @@ with tab3:
         new_initial_cost = col5.number_input("التكلفة المبدئية:", value=curr_initial)
         new_final_cost = col6.number_input("التكلفة النهائية:", value=curr_final)
         
-        col_btn1, col_btn2 = st.columns(2)
-        
-        with col_btn1:
-            if st.button("💾 حفظ التحديثات", use_container_width=True):
-                try:
-                    cell = sheet.find(selected_code)
-                    if cell:
-                        sheet.update_cell(cell.row, 5, new_journal)
-                        sheet.update_cell(cell.row, 6, new_initial_cost)
-                        sheet.update_cell(cell.row, 7, new_final_cost)
-                        sheet.update_cell(cell.row, 8, new_stage)
-                        
-                        st.success("تم تحديث بيانات البحث بنجاح!")
-                        st.rerun()
-                    else:
-                        st.error("لم يتم العثور على هذا البحث في الشيت.")
-                except Exception as e:
-                    st.error(f"حدث خطأ أثناء التحديث: {e}")
+        if st.button("💾 حفظ التحديثات", use_container_width=True):
+            try:
+                cell = sheet.find(selected_code)
+                if cell:
+                    sheet.update_cell(cell.row, 5, new_journal)
+                    sheet.update_cell(cell.row, 6, new_initial_cost)
+                    sheet.update_cell(cell.row, 7, new_final_cost)
+                    sheet.update_cell(cell.row, 8, new_stage)
                     
-        with col_btn2:
-            if st.button("🗑️ حذف البحث نهائياً", use_container_width=True):
-                try:
-                    cell = sheet.find(selected_code)
-                    if cell:
-                        sheet.delete_row(cell.row)
-                        st.success("تم حذف البحث بنجاح من النظام ومن Google Sheets!")
-                        st.rerun()
-                    else:
-                        st.error("لم يتم العثور على هذا البحث في الشيت للحذفه.")
-                except Exception as e:
-                    st.error(f"حدث خطأ أثناء الحذف: {e}")
+                    st.success("تم تحديث بيانات البحث بنجاح!")
+                    st.rerun()
+                else:
+                    st.error("لم يتم العثور على هذا البحث في الشيت.")
+            except Exception as e:
+                st.error(f"حدث خطأ أثناء التحديث: {e}")
