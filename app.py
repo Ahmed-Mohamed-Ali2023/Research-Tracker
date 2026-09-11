@@ -17,7 +17,7 @@ st.markdown("""
     html, body, [class*="css"], .stDataFrame {
         font-family: 'Cairo', sans-serif !important;
         color: #1a1a1a !important; 
-        direction: rtl !important; /* تحويل الاتجاه لليمين */
+        direction: rtl !important; 
     }
     
     .block-container {
@@ -37,7 +37,7 @@ st.markdown("""
         border-radius: 8px 8px 0 0 !important;
         border: 1px solid #333 !important;
         border-bottom: none !important;
-        margin-left: 5px !important; /* تعديل الهامش ليتناسب مع RTL */
+        margin-left: 5px !important; 
         transition: all 0.3s ease !important;
     }
     
@@ -61,6 +61,7 @@ st.title("📊 المنصة الذكية لإدارة ومتابعة نشر ال
 is_admin = st.query_params.get("mode") == "admin"
 
 STAGES = ["الترشيح والتسعير", "موافقة العميل", "التقديم للمجلة", "قيد التحكيم", "التعديلات", "الدفع والقبول", "النشر"]
+COST_STATUSES = ["⏳ بانتظار التكلفة", "✅ تم إرسال التكلفة"]
 
 # ----------------- دالة الاتصال بجوجل شيت -----------------
 @st.cache_resource
@@ -81,6 +82,13 @@ def get_sheet():
 sheet = get_sheet()
 data = sheet.get_all_records()
 df = pd.DataFrame(data)
+
+# معالجة بيانات الأبحاث القديمة لضمان وجود عمود "حالة التكلفة"
+if not df.empty:
+    if 'حالة التكلفة' not in df.columns:
+        df['حالة التكلفة'] = COST_STATUSES[0]
+    else:
+        df['حالة التكلفة'] = df['حالة التكلفة'].replace('', COST_STATUSES[0])
 
 # ----------------- تقسيم الواجهة بناءً على الصلاحيات -----------------
 if is_admin:
@@ -146,11 +154,18 @@ with dashboard_view:
                 return 'color: #f44336; font-weight: bold; background-color: rgba(244, 67, 54, 0.15);'
             return ''
 
+        def style_cost_status(val):
+            if val == "✅ تم إرسال التكلفة":
+                return 'color: #4caf50; font-weight: bold; background-color: rgba(76, 175, 80, 0.1);'
+            elif val == "⏳ بانتظار التكلفة":
+                return 'color: #f44336; font-weight: bold; background-color: rgba(244, 67, 54, 0.1);'
+            return ''
+
         df['نسبة الإنجاز'] = df.get('المرحلة', pd.Series([''] * len(df))).apply(get_progress)
         df['المؤشر'] = df.get('المرحلة', pd.Series([''] * len(df))).apply(get_color_indicator)
         
-        # عكس الترتيب ليبدأ كود البحث من اليمين
-        columns_order = ['نسبة الإنجاز', 'المؤشر', 'المرحلة', 'التكلفة النهائية', 'التكلفة المبدئية', 'اسم المجلة', 'الباحث', 'عنوان البحث', 'تاريخ الاستلام', 'كود البحث']
+        # الترتيب الجديد يشمل "حالة التكلفة"
+        columns_order = ['نسبة الإنجاز', 'المؤشر', 'المرحلة', 'حالة التكلفة', 'التكلفة النهائية', 'التكلفة المبدئية', 'اسم المجلة', 'الباحث', 'عنوان البحث', 'تاريخ الاستلام', 'كود البحث']
         available_columns = [col for col in columns_order if col in df.columns]
         df = df[available_columns]
         
@@ -173,6 +188,7 @@ with dashboard_view:
         ])
         
         styled_df = styled_df.apply(lambda x: [style_indicator_column(v) for v in x], subset=['المؤشر'])
+        styled_df = styled_df.apply(lambda x: [style_cost_status(v) for v in x], subset=['حالة التكلفة'])
         
         st.dataframe(
             styled_df,
@@ -203,9 +219,10 @@ if is_admin:
             
             if st.form_submit_button("حفظ البحث الجديد", type="primary"):
                 if code and title and researcher:
+                    # إضافة حالة التكلفة كقيمة افتراضية للبحث الجديد
                     new_row = [
                         code, str(date_received), title, researcher, 
-                        journal, initial_cost, final_cost, STAGES[0]
+                        journal, initial_cost, final_cost, STAGES[0], COST_STATUSES[0]
                     ]
                     sheet.append_row(new_row)
                     st.success("تمت الإضافة بنجاح! تم حفظ البيانات في Google Sheets.")
@@ -224,10 +241,18 @@ if is_admin:
             current_data = df[df['كود البحث'].astype(str) == selected_code].iloc[0]
             
             st.markdown("---")
-            current_stage = current_data.get('المرحلة', STAGES[0])
-            stage_idx = STAGES.index(current_stage) if current_stage in STAGES else 0
             
-            new_stage = st.selectbox("➡️ اختر المرحلة الجديدة للبحث:", STAGES, index=stage_idx)
+            col_stage, col_status = st.columns(2)
+            with col_stage:
+                current_stage = current_data.get('المرحلة', STAGES[0])
+                stage_idx = STAGES.index(current_stage) if current_stage in STAGES else 0
+                new_stage = st.selectbox("➡️ اختر المرحلة الجديدة للبحث:", STAGES, index=stage_idx)
+                
+            with col_status:
+                current_cost_status = current_data.get('حالة التكلفة', COST_STATUSES[0])
+                cost_idx = COST_STATUSES.index(current_cost_status) if current_cost_status in COST_STATUSES else 0
+                new_cost_status = st.selectbox("💰 هل أرسلت الشركة التكلفة؟", COST_STATUSES, index=cost_idx)
+            
             new_journal = st.text_input("اسم المجلة:", value=str(current_data.get('اسم المجلة', '')))
             
             col5, col6 = st.columns(2)
@@ -252,6 +277,7 @@ if is_admin:
                         sheet.update_cell(cell.row, 6, new_initial_cost)
                         sheet.update_cell(cell.row, 7, new_final_cost)
                         sheet.update_cell(cell.row, 8, new_stage)
+                        sheet.update_cell(cell.row, 9, new_cost_status) # تحديث عمود حالة التكلفة
                         
                         st.success("تم تحديث بيانات البحث بنجاح!")
                         st.rerun()
