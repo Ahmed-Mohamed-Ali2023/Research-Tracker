@@ -9,7 +9,7 @@ from datetime import datetime
 # إعدادات الصفحة
 st.set_page_config(page_title="نظام النشر", layout="wide")
 
-# تطبيق خط Cairo الداكن، تقليل المسافات، وتنسيق التبويبات
+# تطبيق الاتجاه من اليمين لليسار (RTL)، خط Cairo، وتقليل المسافات
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800;900&display=swap');
@@ -17,6 +17,7 @@ st.markdown("""
     html, body, [class*="css"], .stDataFrame {
         font-family: 'Cairo', sans-serif !important;
         color: #1a1a1a !important; 
+        direction: rtl !important; /* تحويل الاتجاه لليمين */
     }
     
     .block-container {
@@ -36,7 +37,7 @@ st.markdown("""
         border-radius: 8px 8px 0 0 !important;
         border: 1px solid #333 !important;
         border-bottom: none !important;
-        margin-right: 5px !important;
+        margin-left: 5px !important; /* تعديل الهامش ليتناسب مع RTL */
         transition: all 0.3s ease !important;
     }
     
@@ -56,7 +57,7 @@ st.markdown("""
 
 st.title("📊 المنصة الذكية لإدارة ومتابعة نشر الأبحاث")
 
-# التحقق من الرابط السري (هل المستخدم هو الأدمن؟)
+# التحقق من الرابط السري
 is_admin = st.query_params.get("mode") == "admin"
 
 STAGES = ["الترشيح والتسعير", "موافقة العميل", "التقديم للمجلة", "قيد التحكيم", "التعديلات", "الدفع والقبول", "النشر"]
@@ -83,15 +84,13 @@ df = pd.DataFrame(data)
 
 # ----------------- تقسيم الواجهة بناءً على الصلاحيات -----------------
 if is_admin:
-    # واجهة الأدمن (كاملة)
     tab1, tab2, tab3 = st.tabs(["📋 لوحة المتابعة", "➕ إضافة بحث", "⚙️ تحديث حالة وتكاليف"])
     dashboard_view = tab1
 else:
-    # واجهة المدير (مشاهدة فقط)
     st.info("👁️ وضع المشاهدة: لوحة المتابعة والإحصائيات")
     dashboard_view = st.container()
 
-# ----------------- الكود الخاص بلوحة المتابعة (يظهر للجميع) -----------------
+# ----------------- الكود الخاص بلوحة المتابعة -----------------
 with dashboard_view:
     if not df.empty:
         total_research = len(df)
@@ -150,7 +149,8 @@ with dashboard_view:
         df['نسبة الإنجاز'] = df.get('المرحلة', pd.Series([''] * len(df))).apply(get_progress)
         df['المؤشر'] = df.get('المرحلة', pd.Series([''] * len(df))).apply(get_color_indicator)
         
-        columns_order = ['كود البحث', 'تاريخ الاستلام', 'عنوان البحث', 'الباحث', 'اسم المجلة', 'التكلفة المبدئية', 'التكلفة النهائية', 'المرحلة', 'المؤشر', 'نسبة الإنجاز']
+        # عكس الترتيب ليبدأ كود البحث من اليمين
+        columns_order = ['نسبة الإنجاز', 'المؤشر', 'المرحلة', 'التكلفة النهائية', 'التكلفة المبدئية', 'اسم المجلة', 'الباحث', 'عنوان البحث', 'تاريخ الاستلام', 'كود البحث']
         available_columns = [col for col in columns_order if col in df.columns]
         df = df[available_columns]
         
@@ -185,7 +185,7 @@ with dashboard_view:
     else:
         st.info("لا توجد أبحاث مسجلة حتى الآن.")
 
-# ----------------- الإضافة والتعديل (تظهر للأدمن فقط) -----------------
+# ----------------- الإضافة والتعديل -----------------
 if is_admin:
     with tab2:
         with st.form("add_form"):
