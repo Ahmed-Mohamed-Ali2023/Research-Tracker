@@ -9,10 +9,10 @@ from datetime import datetime
 # إعدادات الصفحة
 st.set_page_config(page_title="نظام النشر", layout="wide")
 
-# تطبيق خط Cairo الداكن وتقليل المسافات البيضاء
+# تطبيق خط Cairo الداكن، تقليل المسافات، وتنسيق التبويبات العلوية
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@600;800;900&display=swap');
     
     html, body, [class*="css"], .stDataFrame {
         font-family: 'Cairo', sans-serif !important;
@@ -24,6 +24,38 @@ st.markdown("""
         padding-bottom: 1rem !important;
         max-width: 95% !important;
     }
+    
+    /* ----------------- تنسيق التبويبات (Tabs) ----------------- */
+    /* التبويبات العادية */
+    button[data-baseweb="tab"] {
+        font-family: 'Cairo', sans-serif !important;
+        font-size: 20px !important; /* تكبير الخط */
+        font-weight: 800 !important; /* خط عريض */
+        padding: 12px 24px !important;
+        background-color: #1e1e1e !important;
+        color: #9e9e9e !important;
+        border-radius: 8px 8px 0 0 !important;
+        border: 1px solid #333 !important;
+        border-bottom: none !important;
+        margin-right: 5px !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    /* التبويب النشط (المحدد حالياً) */
+    button[data-baseweb="tab"][aria-selected="true"] {
+        background-color: #2196f3 !important; /* أزرق مميز */
+        color: #ffffff !important;
+        border: 1px solid #2196f3 !important;
+        box-shadow: 0 -4px 10px rgba(33, 150, 243, 0.3) !important;
+    }
+    
+    /* تأثير تمرير الماوس */
+    button[data-baseweb="tab"]:hover {
+        background-color: #333 !important;
+        color: #fff !important;
+    }
+    /* -------------------------------------------------------- */
+    
     </style>
 """, unsafe_allow_html=True)
 
